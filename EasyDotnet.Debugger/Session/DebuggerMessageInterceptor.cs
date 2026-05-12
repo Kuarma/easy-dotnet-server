@@ -67,7 +67,22 @@ public class DebuggerMessageInterceptor(
     }
 
     valueConverterService.FormatEvaluateResponse(response);
+    AdvertiseCompletionsCapability(response);
     return Task.FromResult<ProtocolMessage?>(response);
+  }
+  private static void AdvertiseCompletionsCapability(Response response)
+  {
+    if (!response.Success || !string.Equals(response.Command, "initialize", StringComparison.OrdinalIgnoreCase))
+    {
+      return;
+    }
+
+    var body = response.Body is { ValueKind: JsonValueKind.Object }
+      ? JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(response.Body.Value.GetRawText()) ?? []
+      : [];
+
+    body["supportsCompletionsRequest"] = JsonSerializer.SerializeToElement(true);
+    response.Body = JsonSerializer.SerializeToElement(body);
   }
 
   private void TryCaptureStackTrace(Response response)
